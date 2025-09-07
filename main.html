@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StyleSwap AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark gray background */
+            color: #f3f4f6;
+        }
+        .upload-box {
+            border: 2px dashed #4b5563;
+            background-color: #1f2937;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        .upload-box:hover, .upload-box.dragover {
+            border-color: #3b82f6;
+            background-color: #374151;
+        }
+        .upload-box img {
+            max-height: 150px;
+            object-fit: cover;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        .btn-primary:disabled {
+            background-color: #4b5563;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .btn-secondary {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #4b5563;
+        }
+        .btn-secondary:disabled {
+             background-color: #374151;
+             cursor: not-allowed;
+             opacity: 0.5;
+        }
+        .filter-btn {
+            background-color: #374151;
+            border: 1px solid #4b5563;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .filter-btn:hover {
+            background-color: #4b5563;
+            border-color: #6b7280;
+        }
+        .filter-btn.active {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+            color: white;
+        }
+        .loader {
+            border: 4px solid #4b5563;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        .small-loader {
+            width: 20px;
+            height: 20px;
+            border-width: 2px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .slider-thumb::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .slider-thumb::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 40;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #1f2937;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid #4b5563;
+        }
+        #info-modal-content pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+
+    <div id="app" class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-white">StyleSwap AI</h1>
+            <p class="mt-3 text-lg text-gray-400">Your Personal AI Fitting Room. See your new look in seconds.</p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Left Column: Controls -->
+            <div class="flex flex-col gap-6">
+                <!-- Image Uploads -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Person Image Upload -->
+                    <div id="person-upload-box" class="upload-box rounded-lg p-4 text-center cursor-pointer">
+                        <input type="file" id="person-image-input" class="hidden" accept="image/*">
+                        <div id="person-placeholder">
+                            <svg class="mx-auto h-12 w-12 text-gray-500" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 4v.01M28 8L20 16h8v12m0-12V8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-300">Upload Person Photo</h3>
+                            <p class="mt-1 text-xs text-gray-500">Click or drag & drop</p>
+                        </div>
+                        <img id="person-preview" class="hidden mx-auto rounded-md" alt="Person preview">
+                    </div>
+
+                    <!-- Outfit Image Upload -->
+                    <div id="outfit-upload-box" class="upload-box rounded-lg p-4 text-center cursor-pointer">
+                        <input type="file" id="outfit-image-input" class="hidden" accept="image/*">
+                        <div id="outfit-placeholder">
+                            <svg class="mx-auto h-12 w-12 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-300">Upload Outfit Photo</h3>
+                            <p class="mt-1 text-xs text-gray-500">Click or drag & drop</p>
+                        </div>
+                        <img id="outfit-preview" class="hidden mx-auto rounded-md" alt="Outfit preview">
+                    </div>
+                </div>
+
+                <!-- Prompt Input -->
+                <div>
+                    <label for="prompt-input" class="block text-sm font-medium text-gray-300">AI Prompt (Optional)</label>
+                    <input type="text" id="prompt-input" placeholder="e.g., 'change color to red', 'make it a denim jacket'" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+
+                <!-- Generate Button -->
+                <button id="generate-btn" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg shadow-lg flex items-center justify-center" disabled>
+                    <svg id="btn-icon" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 22.5l-.648-1.938a3.375 3.375 0 00-2.672-2.672L11.25 18l1.938-.648a3.375 3.375 0 002.672-2.672L16.25 13.5l.648 1.938a3.375 3.375 0 002.672 2.672L21.75 18l-1.938.648a3.375 3.375 0 00-2.672 2.672z" /></svg>
+                    <span id="btn-text">Try On</span>
+                </button>
+
+                 <!-- AI Text Features -->
+                <div id="ai-features" class="hidden">
+                     <h3 class="text-lg font-semibold border-b border-gray-700 pb-2 mb-4">AI Tools</h3>
+                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button id="style-advisor-btn" class="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center">
+                             <span class="btn-text-secondary">✨ Get Style Advice</span>
+                             <div class="loader small-loader hidden"></div>
+                        </button>
+                        <button id="caption-btn" class="btn-secondary text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center">
+                            <span class="btn-text-secondary">✨ Suggest Caption</span>
+                            <div class="loader small-loader hidden"></div>
+                        </button>
+                     </div>
+                </div>
+
+                <!-- Basic Editing -->
+                <div class="space-y-4" id="editing-controls" style="display: none;">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Adjustments</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label for="brightness" class="text-sm">Brightness</label>
+                            <input id="brightness" type="range" min="0" max="200" value="100" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                        <div>
+                            <label for="contrast" class="text-sm">Contrast</label>
+                            <input id="contrast" type="range" min="0" max="200" value="100" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                         <div>
+                            <label for="saturation" class="text-sm">Saturation</label>
+                            <input id="saturation" type="range" min="0" max="200" value="100" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer slider-thumb">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="space-y-3" id="filter-controls" style="display: none;">
+                    <h3 class="text-lg font-semibold border-b border-gray-700 pb-2">Filters</h3>
+                    <div class="flex flex-wrap gap-2" id="filter-buttons">
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md active" data-filter="none">None</button>
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md" data-filter="grayscale(100%)">Grayscale</button>
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md" data-filter="sepia(100%)">Sepia</button>
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md" data-filter="invert(100%)">Invert</button>
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md" data-filter="hue-rotate(90deg)">Vintage</button>
+                        <button class="filter-btn px-3 py-1 text-sm rounded-md" data-filter="blur(5px)">Blur</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Result Display -->
+            <div id="result-container" class="bg-gray-800 rounded-lg flex items-center justify-center p-4 min-h-[400px] lg:min-h-full border border-gray-700">
+                <div id="result-placeholder" class="text-center text-gray-500">
+                    <svg class="mx-auto h-24 w-24" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                    <p class="mt-4">Your AI-generated look will appear here.</p>
+                </div>
+                <div id="loading-indicator" class="hidden text-center">
+                    <div class="loader mx-auto"></div>
+                    <p class="mt-4 text-gray-400">Generating your new look... This may take a moment.</p>
+                </div>
+                <img id="result-image" class="hidden max-w-full max-h-full object-contain rounded-md" alt="Virtual try-on result">
+            </div>
+        </main>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold text-red-400 mb-4">Generation Failed</h2>
+            <p id="error-message" class="text-gray-300 mb-6"></p>
+            <button id="close-modal-btn" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h2 id="info-modal-title" class="text-xl font-bold text-blue-400 mb-4"></h2>
+            <div id="info-modal-content" class="text-gray-300 mb-6 max-h-[60vh] overflow-y-auto"><pre></pre></div>
+            <button id="close-info-modal-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg">Close</button>
+        </div>
+    </div>
+
+
+    <script>
+        // WARNING: YOUR API KEY IS PUBLICLY VISIBLE HERE.
+        // This is not secure for a public website. Use only for local testing.
+        const apiKey = 'AIzaSyAO_AJmVLs9CihtYHyKfAyQ_TpRcswOe8s';
+
+        const appState = {
+            personImage: null,
+            outfitImage: null,
+            resultImageBase64: null,
+            isLoading: false,
+            activeFilter: 'none'
+        };
+
+        // DOM Elements
+        const personUploadBox = document.getElementById('person-upload-box');
+        const personImageInput = document.getElementById('person-image-input');
+        const personPlaceholder = document.getElementById('person-placeholder');
+        const personPreview = document.getElementById('person-preview');
+
+        const outfitUploadBox = document.getElementById('outfit-upload-box');
+        const outfitImageInput = document.getElementById('outfit-image-input');
+        const outfitPlaceholder = document.getElementById('outfit-placeholder');
+        const outfitPreview = document.getElementById('outfit-preview');
+
+        const promptInput = document.getElementById('prompt-input');
+        const generateBtn = document.getElementById('generate-btn');
+        const btnText = document.getElementById('btn-text');
+        const btnIcon = document.getElementById('btn-icon');
+
+        const resultContainer = document.getElementById('result-container');
+        const resultPlaceholder = document.getElementById('result-placeholder');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const resultImage = document.getElementById('result-image');
+        
+        const aiFeatures = document.getElementById('ai-features');
+        const styleAdvisorBtn = document.getElementById('style-advisor-btn');
+        const captionBtn = document.getElementById('caption-btn');
+
+        const editingControls = document.getElementById('editing-controls');
+        const filterControls = document.getElementById('filter-controls');
+        
+        const brightnessSlider = document.getElementById('brightness');
+        const contrastSlider = document.getElementById('contrast');
+        const saturationSlider = document.getElementById('saturation');
+        const filterButtonsContainer = document.getElementById('filter-buttons');
+
+        const errorModal = document.getElementById('error-modal');
+        const errorMessage = document.getElementById('error-message');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        const infoModal = document.getElementById('info-modal');
+        const infoModalTitle = document.getElementById('info-modal-title');
+        const infoModalContent = document.querySelector('#info-modal-content pre');
+        const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
+
+        // --- Event Listeners ---
+
+        function setupUpload(box, input, preview, placeholder, stateKey) {
+            const handleFile = (file) => {
+                if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        appState[stateKey] = e.target.result.split(',')[1];
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+                        placeholder.classList.add('hidden');
+                        updateGenerateButtonState();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            box.addEventListener('click', () => input.click());
+            input.addEventListener('change', (e) => handleFile(e.target.files[0]));
+            box.addEventListener('dragover', (e) => { e.preventDefault(); box.classList.add('dragover'); });
+            box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+            box.addEventListener('drop', (e) => { e.preventDefault(); box.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); });
+        }
+        
+        setupUpload(personUploadBox, personImageInput, personPreview, personPlaceholder, 'personImage');
+        setupUpload(outfitUploadBox, outfitImageInput, outfitPreview, outfitPlaceholder, 'outfitImage');
+
+        generateBtn.addEventListener('click', handleImageGeneration);
+        styleAdvisorBtn.addEventListener('click', handleStyleAdvice);
+        captionBtn.addEventListener('click', handleCaptionSuggestion);
+
+        brightnessSlider.addEventListener('input', applyImageAdjustments);
+        contrastSlider.addEventListener('input', applyImageAdjustments);
+        saturationSlider.addEventListener('input', applyImageAdjustments);
+        filterButtonsContainer.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                appState.activeFilter = e.target.dataset.filter;
+                applyImageAdjustments();
+            }
+        });
+        
+        closeModalBtn.addEventListener('click', () => errorModal.classList.add('hidden'));
+        closeInfoModalBtn.addEventListener('click', () => infoModal.classList.add('hidden'));
+
+        // --- Core Functions ---
+        
+        function updateGenerateButtonState() {
+            generateBtn.disabled = !(appState.personImage && appState.outfitImage) || appState.isLoading;
+        }
+
+        function setLoadingState(isLoading) {
+            appState.isLoading = isLoading;
+            if (isLoading) {
+                btnText.textContent = 'Generating...';
+                generateBtn.classList.add('animate-pulse');
+                resultPlaceholder.classList.add('hidden');
+                resultImage.classList.add('hidden');
+                editingControls.style.display = 'none';
+                filterControls.style.display = 'none';
+                aiFeatures.classList.add('hidden');
+                loadingIndicator.classList.remove('hidden');
+            } else {
+                btnText.textContent = 'Try On';
+                generateBtn.classList.remove('animate-pulse');
+                loadingIndicator.classList.add('hidden');
+            }
+            updateGenerateButtonState();
+        }
+
+        async function handleImageGeneration() {
+            if (!appState.personImage || !appState.outfitImage) {
+                showError("Please upload both a person and an outfit image.");
+                return;
+            }
+            setLoadingState(true);
+
+            const userPrompt = promptInput.value.trim();
+            const fullPrompt = `Take the clothing from the second image (the outfit) and realistically place it on the person in the first image. ${userPrompt ? `Then apply this edit: ${userPrompt}.` : ''} Make sure the result is high quality and photorealistic.`;
+            
+            const payload = {
+                contents: [{ parts: [
+                    { inlineData: { mimeType: "image/png", data: appState.personImage } },
+                    { inlineData: { mimeType: "image/png", data: appState.outfitImage } },
+                    { text: fullPrompt }
+                ] }],
+                generationConfig: { responseModalities: ['IMAGE'] },
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+            
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+                }
+                const result = await response.json();
+                const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                if (!base64Data) throw new Error("No image data found in the AI response. The model may have refused the request due to safety policies.");
+                
+                appState.resultImageBase64 = base64Data;
+                displayResult(base64Data);
+            } catch (error) {
+                console.error("Image generation failed:", error);
+                showError(error.message || "An unknown error occurred during image generation.");
+                resultPlaceholder.classList.remove('hidden');
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        async function handleStyleAdvice() {
+            if (!appState.resultImageBase64) return;
+            setSecondaryLoading(styleAdvisorBtn, true);
+
+            const prompt = "You are a fashion expert. Describe the outfit in this image. What kind of style is it? Suggest 2-3 accessories that would complement the look perfectly. Keep the tone upbeat and encouraging.";
+            try {
+                const resultText = await generateTextFromImage(prompt, appState.resultImageBase64);
+                showInfoModal("✨ AI Style Advisor", resultText);
+            } catch (error) {
+                showError(error.message || "Failed to get style advice.");
+            } finally {
+                setSecondaryLoading(styleAdvisorBtn, false);
+            }
+        }
+
+        async function handleCaptionSuggestion() {
+            if (!appState.resultImageBase64) return;
+            setSecondaryLoading(captionBtn, true);
+
+            const prompt = "Generate three witty and short social media captions for this photo. Include relevant emojis and hashtags.";
+            try {
+                const resultText = await generateTextFromImage(prompt, appState.resultImageBase64);
+                showInfoModal("✨ Social Media Captions", resultText);
+            } catch (error) {
+                showError(error.message || "Failed to generate captions.");
+            } finally {
+                setSecondaryLoading(captionBtn, false);
+            }
+        }
+
+        async function generateTextFromImage(prompt, imageBase64) {
+            const payload = {
+                contents: [{ parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType: "image/png", data: imageBase64 } }
+                ] }]
+            };
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || `HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error("The AI did not return any text. Please try again.");
+            return text;
+        }
+        
+        async function fetchWithRetry(url, options, retries = 3, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status !== 429) return response; // Not a rate limit error, so return
+                    console.warn(`Rate limited. Retrying in ${delay / 1000}s...`);
+                } catch (error) {
+                    if (i === retries - 1) throw error; // Rethrow last error
+                }
+                // Wait for the delay
+                await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+            }
+            throw new Error("Max retries reached for fetch request.");
+        }
+
+        function displayResult(base64Data) {
+            resultImage.src = `data:image/png;base64,${base64Data}`;
+            resultImage.classList.remove('hidden');
+            resultPlaceholder.classList.add('hidden');
+            aiFeatures.classList.remove('hidden');
+            editingControls.style.display = 'block';
+            filterControls.style.display = 'block';
+            resetAdjustments();
+        }
+
+        function applyImageAdjustments() {
+            const brightness = brightnessSlider.value;
+            const contrast = contrastSlider.value;
+            const saturation = saturationSlider.value;
+            const filterValue = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) ${appState.activeFilter !== 'none' ? appState.activeFilter : ''}`;
+            resultImage.style.filter = filterValue.trim();
+        }
+        
+        function resetAdjustments() {
+             brightnessSlider.value = 100;
+             contrastSlider.value = 100;
+             saturationSlider.value = 100;
+             appState.activeFilter = 'none';
+             document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+             document.querySelector('.filter-btn[data-filter="none"]').classList.add('active');
+             applyImageAdjustments();
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorModal.classList.remove('hidden');
+        }
+
+        function showInfoModal(title, content) {
+            infoModalTitle.textContent = title;
+            infoModalContent.textContent = content;
+            infoModal.classList.remove('hidden');
+        }
+
+        function setSecondaryLoading(button, isLoading) {
+            const textSpan = button.querySelector('.btn-text-secondary');
+            const loader = button.querySelector('.loader');
+            if (isLoading) {
+                button.disabled = true;
+                textSpan.classList.add('hidden');
+                loader.classList.remove('hidden');
+            } else {
+                button.disabled = false;
+                textSpan.classList.remove('hidden');
+                loader.classList.add('hidden');
+            }
+        }
+
+    </script>
+</body>
+</html>
+
